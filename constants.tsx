@@ -94,7 +94,10 @@ export const MOCK_MATCHES: Match[] = [
     status: MatchStatus.CREATED,
     ageCategory: 'minor',
     creatorId: 'u2',
-    participants: ['u2']
+    participants: ['u2'],
+    // Fix: Added missing required checkInStatus and verificationCodes properties
+    checkInStatus: { 'u2': 'none' },
+    verificationCodes: { 'u2': 'ABCD12' }
   },
   {
     id: 'm2',
@@ -106,6 +109,9 @@ export const MOCK_MATCHES: Match[] = [
     status: MatchStatus.CREATED,
     ageCategory: 'adult',
     creatorId: 'u3',
-    participants: ['u3']
+    participants: ['u3'],
+    // Fix: Added missing required checkInStatus and verificationCodes properties
+    checkInStatus: { 'u3': 'none' },
+    verificationCodes: { 'u3': 'EFGH34' }
   }
 ];

@@ -1,6 +1,6 @@
 {
-  "name": "Copy of Nexus Sports",
-  "description": "A high-security sports matchmaking platform with hard-partitioned environments for adults and minors, featuring ELO-based matchmaking and parental oversight.",
+  "name": "Nexus Sports",
+  "description": "High-security sports matchmaking with ELO-based partitioning and real-world venue grounding.",
   "requestFramePermissions": [
     "geolocation"
   ]

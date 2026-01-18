@@ -10,7 +10,8 @@ export enum Sport {
 
 export enum MatchStatus {
   CREATED = 'created',
-  CONFIRMED = 'confirmed',
+  CHECK_IN = 'check_in',
+  HANDSHAKE = 'handshake',
   IN_PROGRESS = 'in_progress',
   COMPLETED = 'completed',
   CANCELED = 'canceled'
@@ -38,6 +39,7 @@ export interface User {
   notifications?: string[];
 }
 
+// Fix: Added missing Venue interface required by constants.tsx
 export interface Venue {
   id: string;
   name: string;
@@ -45,7 +47,6 @@ export interface Venue {
   lat: number;
   lng: number;
   isPublic: boolean;
-  placeUri?: string;
 }
 
 export interface Match {
@@ -61,6 +62,9 @@ export interface Match {
   creatorId: string;
   participants: string[];
   activeBoost?: string;
+  checkInStatus: Record<string, 'here' | 'delayed' | 'none'>;
+  verificationCodes: Record<string, string>;
+  winnerId?: string;
 }
 
 export interface Message {

@@ -15,20 +15,27 @@ const CreateMatch: React.FC<CreateMatchProps> = ({ role, userId, onCreate, onCan
   const [level, setLevel] = useState(3);
   const [isCompetitive, setIsCompetitive] = useState(true);
   const [venueId, setVenueId] = useState(MOCK_VENUES[0].id);
+  const [isInstant, setIsInstant] = useState(true);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const scheduledAt = isInstant 
+      ? new Date(Date.now() - 1000).toISOString() // Slightly in the past to trigger check-in immediately
+      : new Date(Date.now() + 86400000).toISOString();
+
     const newMatch: Match = {
       id: Math.random().toString(36).substr(2, 9),
       sport,
       skillLevelReq: level,
       isCompetitive,
       venueId,
-      scheduledAt: new Date(Date.now() + 86400000).toISOString(), // Tomorrow
+      scheduledAt,
       status: MatchStatus.CREATED,
       ageCategory: role,
       creatorId: userId,
-      participants: [userId]
+      participants: [userId],
+      checkInStatus: { [userId]: 'none' },
+      verificationCodes: { [userId]: Math.random().toString(36).substr(2, 6).toUpperCase() }
     };
     onCreate(newMatch);
   };
@@ -41,7 +48,7 @@ const CreateMatch: React.FC<CreateMatchProps> = ({ role, userId, onCreate, onCan
         <div className="w-10"></div>
       </header>
 
-      <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-8">
+      <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-8 no-scrollbar">
         <section className="space-y-4">
           <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Select Sport</label>
           <div className="grid grid-cols-2 gap-3">
@@ -77,6 +84,30 @@ const CreateMatch: React.FC<CreateMatchProps> = ({ role, userId, onCreate, onCan
             ))}
           </div>
         </section>
+
+        <div className="space-y-4">
+          <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Scheduling</label>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setIsInstant(true)}
+              className={`flex-1 p-4 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all ${
+                isInstant ? 'bg-emerald-500 text-black border-emerald-500' : 'bg-zinc-900 border-zinc-800 text-zinc-500'
+              }`}
+            >
+              Instant Start
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsInstant(false)}
+              className={`flex-1 p-4 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all ${
+                !isInstant ? 'bg-emerald-500 text-black border-emerald-500' : 'bg-zinc-900 border-zinc-800 text-zinc-500'
+              }`}
+            >
+              Tomorrow
+            </button>
+          </div>
+        </div>
 
         <section className="flex items-center justify-between bg-zinc-900 p-4 rounded-2xl border border-zinc-800">
           <div>

@@ -11,13 +11,31 @@ interface FriendsProps {
 
 const Friends: React.FC<FriendsProps> = ({ role, currentUser, onFollowToggle, allUsers }) => {
   const [activeSubTab, setActiveSubTab] = useState<'friends' | 'discover' | 'messages'>('friends');
+  const [searchQuery, setSearchQuery] = useState('');
   
   const otherUsers = allUsers.filter(u => u.ageCategory === role && u.id !== currentUser.id);
-  const followingList = otherUsers.filter(u => currentUser.following.includes(u.id));
-  const discoverList = otherUsers.filter(u => !currentUser.following.includes(u.id));
+  
+  const filteredUsers = otherUsers.filter(u => 
+    u.username.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const followingList = filteredUsers.filter(u => currentUser.following.includes(u.id));
+  const discoverList = filteredUsers.filter(u => !currentUser.following.includes(u.id));
 
   return (
     <div className="p-4 space-y-6">
+      {/* Search Header */}
+      <div className="relative group">
+        <input 
+          type="text"
+          placeholder="Search Athlete DNA..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-5 text-xs text-white placeholder:text-zinc-700 outline-none focus:border-emerald-500 transition-all shadow-xl"
+        />
+        <span className="absolute right-5 top-5 text-zinc-600 font-black">🔍</span>
+      </div>
+
       <div className="flex bg-zinc-900/50 p-1.5 rounded-2xl border border-zinc-800 sticky top-0 z-10 backdrop-blur-xl shadow-xl">
         <button 
           onClick={() => setActiveSubTab('friends')}
@@ -25,7 +43,7 @@ const Friends: React.FC<FriendsProps> = ({ role, currentUser, onFollowToggle, al
             activeSubTab === 'friends' ? 'bg-emerald-500 text-black' : 'text-zinc-500'
           }`}
         >
-          SQUAD ({followingList.length})
+          SQUAD
         </button>
         <button 
           onClick={() => setActiveSubTab('discover')}
@@ -54,27 +72,16 @@ const Friends: React.FC<FriendsProps> = ({ role, currentUser, onFollowToggle, al
               <span className="text-emerald-500/50">Monitoring strictly professional</span>
             </p>
           </div>
-          <div className="space-y-4 opacity-60">
-            {followingList.slice(0, 3).map(u => (
-              <div key={u.id} className="bg-zinc-900 p-6 rounded-3xl flex items-center gap-5 border border-zinc-800">
-                <div className="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center font-black italic">{u.username[0]}</div>
-                <div className="flex-1">
-                  <h4 className="text-xs font-black italic">{u.username}</h4>
-                  <p className="text-[9px] text-zinc-600 uppercase font-black">Tap to establish link</p>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       ) : (
         <div className="space-y-4">
           <h3 className="text-[10px] font-black uppercase text-zinc-600 tracking-widest px-1">
-            {activeSubTab === 'friends' ? 'Sector Connections' : 'New Athletes in Sector'}
+            {activeSubTab === 'friends' ? 'Sector Connections' : 'Global Athlete Search'}
           </h3>
           
           {(activeSubTab === 'friends' ? followingList : discoverList).length === 0 ? (
             <div className="text-center py-20 bg-zinc-900/20 rounded-[3rem] border border-zinc-800 border-dashed">
-              <p className="text-[10px] text-zinc-600 font-black uppercase tracking-widest italic">No targets identified.</p>
+              <p className="text-[10px] text-zinc-600 font-black uppercase tracking-widest italic">No matching DNA profiles found.</p>
             </div>
           ) : (
             (activeSubTab === 'friends' ? followingList : discoverList).map(user => (
@@ -104,13 +111,6 @@ const Friends: React.FC<FriendsProps> = ({ role, currentUser, onFollowToggle, al
               </div>
             ))
           )}
-          
-          <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-[2.5rem] p-10 text-center mt-8">
-            <h4 className="text-emerald-400 font-black text-xs uppercase mb-3 tracking-widest italic">Team Synergy Intel</h4>
-            <p className="text-[10px] text-zinc-600 leading-relaxed uppercase tracking-tighter italic max-w-xs mx-auto">
-              Squad members earn +15% coin multipliers when competing in the same match sector.
-            </p>
-          </div>
         </div>
       )}
     </div>
