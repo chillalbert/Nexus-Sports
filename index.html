@@ -26,10 +26,9 @@
       }
     </style>
     <script>
-      // Shim to prevent ReferenceError in browser environments
-      if (typeof window.process === 'undefined') {
-        window.process = { env: {} };
-      }
+      // Safer shim: only initialize if process or process.env is missing
+      window.process = window.process || {};
+      window.process.env = window.process.env || {};
     </script>
     <script type="importmap">
     {

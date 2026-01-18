@@ -41,26 +41,23 @@ const App: React.FC = () => {
     if (savedUser) {
       try {
         const parsed = JSON.parse(savedUser);
-        if (parsed.email === 'sportssquareauthor@gmail.com') {
-          parsed.isAdmin = true;
-          parsed.canPostVideos = true;
-          parsed.applicationStatus = 'approved';
-        }
-        setUserProfile(parsed);
-        if (parsed.ageCategory === 'parent') {
+        const latestProfile = allUsers.find(u => u.id === parsed.id) || parsed;
+        setUserProfile(latestProfile);
+        if (latestProfile.ageCategory === 'parent') {
           setActiveTab('dashboard');
         }
       } catch (e) {
         localStorage.removeItem('nexus_user');
       }
     }
-  }, []);
+  }, [allUsers.length]);
 
   const persistUser = (user: User) => {
     setUserProfile(user);
     localStorage.setItem('nexus_user', JSON.stringify(user));
     setAllUsers(prev => {
-      const next = prev.map(u => u.id === user.id ? user : u);
+      const exists = prev.some(u => u.id === user.id);
+      const next = exists ? prev.map(u => u.id === user.id ? user : u) : [...prev, user];
       localStorage.setItem('nexus_all_users', JSON.stringify(next));
       return next;
     });
@@ -73,7 +70,8 @@ const App: React.FC = () => {
 
   const handleAwardCoins = (amount: number) => {
     if (!userProfile) return;
-    persistUser({ ...userProfile, coinBalance: (userProfile.coinBalance || 0) + amount });
+    const updated = { ...userProfile, coinBalance: (userProfile.coinBalance || 0) + amount };
+    persistUser(updated);
   };
 
   const handleSendPrivateMessage = async (receiverId: string, text: string) => {
@@ -95,14 +93,17 @@ const App: React.FC = () => {
       return next;
     });
 
-    // Run safety scan
-    const safety = await safetyGuardian(text);
-    if (!safety.isSafe) {
-      setPrivateMessages(prev => {
-        const next = prev.map(m => m.id === msgId ? { ...m, isFlagged: true, text: "🚫 Redacted for safety." } : m);
-        localStorage.setItem('nexus_private_messages', JSON.stringify(next));
-        return next;
-      });
+    try {
+      const safety = await safetyGuardian(text);
+      if (safety && !safety.isSafe) {
+        setPrivateMessages(prev => {
+          const next = prev.map(m => m.id === msgId ? { ...m, isFlagged: true, text: "🚫 Redacted for safety." } : m);
+          localStorage.setItem('nexus_private_messages', JSON.stringify(next));
+          return next;
+        });
+      }
+    } catch (err) {
+      console.error("Safety scan failed:", err);
     }
   };
 
@@ -112,17 +113,15 @@ const App: React.FC = () => {
       user.canPostVideos = true;
       user.applicationStatus = 'approved';
     }
-    setUserProfile(user);
-    localStorage.setItem('nexus_user', JSON.stringify(user));
-    setAllUsers(prev => {
-      const exists = prev.find(u => u.id === user.id);
-      let next = exists ? prev.map(u => u.id === user.id ? user : u) : [...prev, user];
-      localStorage.setItem('nexus_all_users', JSON.stringify(next));
-      return next;
-    });
-    const isAdmin = user.isAdmin || user.email === 'sportssquareauthor@gmail.com';
-    if (user.ageCategory === 'parent') setActiveTab('dashboard');
-    else if (isAdmin) setActiveTab('verification');
+    
+    // Ensure this login doesn't overwrite existing local profile data if we already had it
+    const localRegistry = JSON.parse(localStorage.getItem('nexus_all_users') || '[]');
+    const latestFromRegistry = localRegistry.find((u: User) => u.id === user.id) || user;
+
+    persistUser(latestFromRegistry);
+
+    if (latestFromRegistry.ageCategory === 'parent') setActiveTab('dashboard');
+    else if (latestFromRegistry.isAdmin) setActiveTab('verification');
     else setActiveTab('discovery');
   };
 
@@ -130,17 +129,6 @@ const App: React.FC = () => {
     localStorage.removeItem('nexus_user');
     setUserProfile(null);
     setActiveTab('discovery');
-    setShowBlueprint(false);
-  };
-
-  const handleApplyForVideo = () => {
-    if (!userProfile) return;
-    window.open(GOOGLE_FORM_URL, '_blank');
-    persistUser({ 
-      ...userProfile, 
-      applicationStatus: 'pending' as ApplicationStatus,
-      notifications: [...(userProfile.notifications || []), "Application submitted. Checking eligibility..."]
-    });
   };
 
   const handleVerificationAction = (userId: string, status: 'approved' | 'declined') => {
@@ -148,20 +136,13 @@ const App: React.FC = () => {
       const updatedList = prev.map(u => {
         if (u.id === userId) {
           const notification = status === 'approved' 
-            ? "ACCESS GRANTED: You can now post drills to the Watch feed! 📹" 
-            : "ACCESS DENIED: Your content application did not meet our pro standards.";
+            ? "ACCESS GRANTED: Video upload unlocked!" 
+            : "ACCESS DENIED: Standard not met.";
           return { ...u, applicationStatus: status as ApplicationStatus, canPostVideos: status === 'approved', notifications: [...(u.notifications || []), notification] };
         }
         return u;
       });
       localStorage.setItem('nexus_all_users', JSON.stringify(updatedList));
-      if (userProfile?.id === userId) {
-        const syncUser = updatedList.find(u => u.id === userId);
-        if (syncUser) {
-          setUserProfile(syncUser);
-          localStorage.setItem('nexus_user', JSON.stringify(syncUser));
-        }
-      }
       return updatedList;
     });
   };
@@ -170,38 +151,22 @@ const App: React.FC = () => {
     if (!userProfile) return;
     const isFollowing = userProfile.following.includes(targetId);
     const newFollowing = isFollowing ? userProfile.following.filter(id => id !== targetId) : [...userProfile.following, targetId];
-    const updatedMe = { ...userProfile, following: newFollowing };
-    setAllUsers(prev => {
-      const next = prev.map(u => {
-        if (u.id === userProfile.id) return updatedMe;
-        if (u.id === targetId) {
-          const newFollowers = isFollowing ? (u.followers || []).filter(id => id !== userProfile.id) : [...(u.followers || []), userProfile.id];
-          return { ...u, followers: newFollowers };
-        }
-        return u;
-      });
-      localStorage.setItem('nexus_all_users', JSON.stringify(next));
-      return next;
-    });
-    setUserProfile(updatedMe);
-    localStorage.setItem('nexus_user', JSON.stringify(updatedMe));
+    persistUser({ ...userProfile, following: newFollowing });
   };
 
   const handlePostVideo = (title: string, sport: Sport) => {
     if (!userProfile) return;
     const newVideo: DrillVideo = { id: `v-${Date.now()}`, title, author: userProfile.username, authorId: userProfile.id, videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4', likes: 0, comments: 0, sport, popularityScore: 999999 };
     setVideos([newVideo, ...videos]);
-    persistUser({ ...userProfile, notifications: [...(userProfile.notifications || []), `Video "${title}" posted successfully!`] });
+    persistUser({ ...userProfile, notifications: [...(userProfile.notifications || []), `Video "${title}" posted.`] });
   };
 
   if (!userProfile) return <Auth onLogin={handleLogin} />;
   const role = userProfile.ageCategory;
-  const isAdmin = userProfile.isAdmin || userProfile.email === 'sportssquareauthor@gmail.com';
 
   return (
     <Layout activeTab={activeTab} setActiveTab={setActiveTab} role={role} user={userProfile}>
-      {showBlueprint ? <TechnicalBlueprint /> : 
-        activeTab === 'dashboard' ? <ParentDashboard /> :
+      {activeTab === 'dashboard' ? <ParentDashboard /> :
         activeTab === 'discovery' ? <Discovery role={role} onJoinMatch={(m) => setSelectedMatch(m)} onCreateRequest={() => setIsCreatingMatch(true)} matches={matches} /> :
         activeTab === 'watch' ? <WatchFeed currentUser={userProfile} videos={videos} onFollowToggle={handleToggleFollow} onPostVideo={handlePostVideo} /> :
         activeTab === 'friends' ? <Friends role={role} currentUser={userProfile} allUsers={allUsers} onFollowToggle={handleToggleFollow} messages={privateMessages} onSendMessage={handleSendPrivateMessage} /> :
@@ -215,12 +180,12 @@ const App: React.FC = () => {
             <div>
               <h2 className="text-2xl font-black italic tracking-tight flex items-center gap-2">
                 {userProfile.username}
-                {isAdmin && <span className="text-[8px] bg-white text-black px-2 py-0.5 rounded-full tracking-widest font-black shadow-lg">ADMIN</span>}
+                {userProfile.isAdmin && <span className="text-[8px] bg-white text-black px-2 py-0.5 rounded-full tracking-widest font-black">ADMIN</span>}
               </h2>
-              <p className="text-zinc-500 font-bold text-[10px] uppercase tracking-widest">Lv. {Math.floor(userProfile.elo['Basketball 1v1'] / 300)} Athlete</p>
+              <p className="text-zinc-500 font-bold text-[10px] uppercase tracking-widest">Athlete DNA Signature</p>
             </div>
           </div>
-          <button onClick={handleLogout} className="w-full bg-red-500/10 border border-red-500/20 p-6 rounded-3xl text-left flex justify-between items-center text-red-500 font-black uppercase text-xs">Sign Out 🚪</button>
+          <button onClick={handleLogout} className="w-full bg-red-500/10 border border-red-500/20 p-6 rounded-3xl text-left flex justify-between items-center text-red-500 font-black uppercase text-xs">Sign Out</button>
         </div> : null
       }
       {selectedMatch && <Lobby match={selectedMatch} role={role} onClose={() => setSelectedMatch(null)} onUpdateMatch={handleUpdateMatch} onAwardCoins={handleAwardCoins} />}
