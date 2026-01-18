@@ -36,6 +36,12 @@ const App: React.FC = () => {
     if (savedUser) {
       try {
         const parsed = JSON.parse(savedUser);
+        // Force sync admin status for specific email even on reload
+        if (parsed.email === 'sportssquareauthor@gmail.com') {
+          parsed.isAdmin = true;
+          parsed.canPostVideos = true;
+          parsed.applicationStatus = 'approved';
+        }
         setUserProfile(parsed);
         if (parsed.ageCategory === 'parent') {
           setActiveTab('dashboard');
@@ -58,6 +64,13 @@ const App: React.FC = () => {
   };
 
   const handleLogin = (user: User) => {
+    // Master Admin Overrides
+    if (user.email === 'sportssquareauthor@gmail.com') {
+      user.isAdmin = true;
+      user.canPostVideos = true;
+      user.applicationStatus = 'approved';
+    }
+
     setUserProfile(user);
     localStorage.setItem('nexus_user', JSON.stringify(user));
     
@@ -166,7 +179,8 @@ const App: React.FC = () => {
       videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
       likes: 0,
       comments: 0,
-      sport
+      sport,
+      popularityScore: 999999 // Ensure new posts are ranked highly temporarily
     };
     setVideos([newVideo, ...videos]);
     persistUser({
@@ -252,7 +266,7 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            {role !== 'parent' && !userProfile.isAdmin && (
+            {role !== 'parent' && !isAdmin && (
               <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-8 shadow-2xl space-y-5 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:rotate-12 transition-transform pointer-events-none">
                    <span className="text-6xl">📹</span>

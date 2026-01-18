@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { DrillVideo, User, Sport } from '../types';
 
 interface WatchFeedProps {
@@ -12,22 +12,27 @@ interface WatchFeedProps {
 const WatchFeed: React.FC<WatchFeedProps> = ({ currentUser, videos, onFollowToggle, onPostVideo }) => {
   const [likedVideos, setLikedVideos] = useState<Set<string>>(new Set());
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [isPosting, setIsPosting] = useState(false);
   const [uploadTitle, setUploadTitle] = useState('');
   const [uploadSport, setUploadSport] = useState<Sport>(Sport.BASKETBALL_1V1);
 
-  // Advanced Recommendation Engine
+  // Advanced Recommendation Engine with Recency Weighting
   const rankedVideos = useMemo(() => {
     return [...videos].map(v => {
       const isFollowing = currentUser.following.includes(v.authorId);
       const isLiked = likedVideos.has(v.id);
       
-      // Score-based ranking
-      const followBonus = isFollowing ? 10000 : 0;
+      // Base score components
+      const followBonus = isFollowing ? 5000 : 0;
       const likeBonus = isLiked ? 500 : 0;
-      const randomness = Math.floor(Math.random() * 200);
       const activityScore = (v.likes * 2) + (v.comments * 5);
       
-      return { ...v, score: followBonus + likeBonus + activityScore + randomness };
+      // Popularity score from the post itself (used for new uploads)
+      const freshBonus = v.popularityScore || 0;
+      
+      const randomness = Math.floor(Math.random() * 100);
+      
+      return { ...v, score: followBonus + likeBonus + activityScore + freshBonus + randomness };
     }).sort((a, b) => (b.score || 0) - (a.score || 0));
   }, [videos, currentUser.following, likedVideos]);
 
@@ -42,10 +47,17 @@ const WatchFeed: React.FC<WatchFeedProps> = ({ currentUser, videos, onFollowTogg
 
   const handlePostSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!uploadTitle.trim()) return;
-    onPostVideo(uploadTitle, uploadSport);
-    setShowUploadModal(false);
-    setUploadTitle('');
+    if (!uploadTitle.trim() || isPosting) return;
+    
+    setIsPosting(true);
+    
+    // Simulate upload delay for realism
+    setTimeout(() => {
+      onPostVideo(uploadTitle, uploadSport);
+      setIsPosting(false);
+      setShowUploadModal(false);
+      setUploadTitle('');
+    }, 1500);
   };
 
   return (
@@ -54,13 +66,13 @@ const WatchFeed: React.FC<WatchFeedProps> = ({ currentUser, videos, onFollowTogg
         <div className="w-10"></div>
         <div className="flex gap-8">
           <button className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-500 hover:text-white transition-all">Squad</button>
-          <button className="text-[10px] font-black uppercase tracking-[0.5em] text-white border-b-2 border-emerald-500 pb-1.5">Global</button>
+          <button className="text-[10px] font-black uppercase tracking-[0.5em] text-white border-b-2 border-emerald-500 pb-1.5 shadow-[0_5px_15px_rgba(16,185,129,0.3)]">Global</button>
         </div>
         <div>
           {currentUser.canPostVideos && (
             <button 
               onClick={() => setShowUploadModal(true)}
-              className="w-10 h-10 rounded-2xl bg-emerald-500 text-black flex items-center justify-center font-black text-xl shadow-[0_0_20px_rgba(16,185,129,0.3)] active:scale-90 transition-all"
+              className="w-10 h-10 rounded-2xl bg-emerald-500 text-black flex items-center justify-center font-black text-xl shadow-[0_0_20px_rgba(16,185,129,0.4)] active:scale-90 transition-all hover:bg-emerald-400"
             >
               +
             </button>
@@ -69,9 +81,9 @@ const WatchFeed: React.FC<WatchFeedProps> = ({ currentUser, videos, onFollowTogg
       </div>
 
       {showUploadModal && (
-        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-6">
+        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-200">
           <div className="w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in-95 duration-200">
-            <h3 className="text-xl font-black italic uppercase mb-6 tracking-tighter">New Drill Post</h3>
+            <h3 className="text-xl font-black italic uppercase mb-6 tracking-tighter text-emerald-400">Post Elite Drill</h3>
             <form onSubmit={handlePostSubmit} className="space-y-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Drill Title</label>
@@ -79,23 +91,38 @@ const WatchFeed: React.FC<WatchFeedProps> = ({ currentUser, videos, onFollowTogg
                   autoFocus
                   placeholder="e.g. Crossover Isolation Drills"
                   value={uploadTitle}
+                  disabled={isPosting}
                   onChange={(e) => setUploadTitle(e.target.value)}
-                  className="w-full bg-black border border-zinc-800 rounded-2xl p-4 text-sm focus:border-emerald-500 outline-none transition-all"
+                  className="w-full bg-black border border-zinc-800 rounded-2xl p-4 text-sm focus:border-emerald-500 outline-none transition-all placeholder:text-zinc-700"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Sport Category</label>
                 <select 
                   value={uploadSport}
+                  disabled={isPosting}
                   onChange={(e) => setUploadSport(e.target.value as Sport)}
-                  className="w-full bg-black border border-zinc-800 rounded-2xl p-4 text-sm outline-none appearance-none"
+                  className="w-full bg-black border border-zinc-800 rounded-2xl p-4 text-sm outline-none appearance-none text-zinc-300"
                 >
                   {Object.values(Sport).map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
-              <div className="flex gap-3">
-                <button type="button" onClick={() => setShowUploadModal(false)} className="flex-1 py-4 text-xs font-black uppercase text-zinc-500">Cancel</button>
-                <button type="submit" className="flex-1 bg-emerald-500 text-black py-4 rounded-2xl text-xs font-black uppercase shadow-lg shadow-emerald-500/20">Post Asset</button>
+              <div className="flex gap-3 pt-2">
+                {!isPosting && (
+                  <button type="button" onClick={() => setShowUploadModal(false)} className="flex-1 py-4 text-xs font-black uppercase text-zinc-500 hover:text-white transition-colors">Cancel</button>
+                )}
+                <button 
+                  type="submit" 
+                  disabled={isPosting || !uploadTitle.trim()}
+                  className={`flex-1 bg-emerald-500 text-black py-4 rounded-2xl text-xs font-black uppercase shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 ${isPosting ? 'opacity-50' : 'hover:bg-emerald-400 active:scale-95'}`}
+                >
+                  {isPosting ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"></span>
+                      Syncing...
+                    </>
+                  ) : 'Post Asset'}
+                </button>
               </div>
             </form>
           </div>
@@ -123,7 +150,7 @@ const WatchFeed: React.FC<WatchFeedProps> = ({ currentUser, videos, onFollowTogg
             {/* Side Interaction Bar */}
             <div className="absolute bottom-32 right-4 flex flex-col items-center gap-8 z-30">
               <div className="flex flex-col items-center relative mb-4">
-                <div className="w-16 h-16 rounded-3xl border-2 border-emerald-500/60 p-1 bg-black/60 backdrop-blur-3xl shadow-2xl">
+                <div className="w-16 h-16 rounded-3xl border-2 border-emerald-500/60 p-1 bg-black/60 backdrop-blur-3xl shadow-2xl group-hover:rotate-3 transition-transform">
                   <div className="w-full h-full rounded-2xl bg-zinc-900 flex items-center justify-center font-black italic border border-white/10 text-emerald-400 text-xl">
                     {video.author[0].toUpperCase()}
                   </div>
@@ -141,23 +168,23 @@ const WatchFeed: React.FC<WatchFeedProps> = ({ currentUser, videos, onFollowTogg
                 className="flex flex-col items-center gap-1.5 group/btn"
               >
                 <div className={`w-12 h-12 rounded-2xl backdrop-blur-3xl flex items-center justify-center transition-all duration-300 border border-white/5 ${likedVideos.has(video.id) ? 'bg-red-500 text-white scale-110 shadow-red-500/40' : 'bg-white/10 text-white hover:bg-white/20'}`}>
-                  <span className={`text-2xl ${likedVideos.has(video.id) ? 'animate-bounce' : ''}`}>🔥</span>
+                  <span className={`text-2xl ${likedVideos.has(video.id) ? 'animate-bounce' : 'group-hover/btn:scale-110 transition-transform'}`}>🔥</span>
                 </div>
                 <span className={`text-[10px] font-black tracking-widest ${likedVideos.has(video.id) ? 'text-red-400' : 'text-zinc-500'}`}>
                   {video.likes + (likedVideos.has(video.id) ? 1 : 0)}
                 </span>
               </button>
 
-              <button className="flex flex-col items-center gap-1.5">
+              <button className="flex flex-col items-center gap-1.5 group/btn">
                 <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-3xl flex items-center justify-center text-white border border-white/5 hover:bg-white/20 transition-all">
-                  <span className="text-2xl">💬</span>
+                  <span className="text-2xl group-hover/btn:scale-110 transition-transform">💬</span>
                 </div>
                 <span className="text-[10px] font-black tracking-widest text-zinc-500">{video.comments}</span>
               </button>
 
-              <button className="flex flex-col items-center gap-1.5">
+              <button className="flex flex-col items-center gap-1.5 group/btn">
                 <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-3xl flex items-center justify-center text-white border border-white/5 hover:bg-white/20 transition-all">
-                  <span className="text-2xl">🚀</span>
+                  <span className="text-2xl group-hover/btn:rotate-12 transition-transform">🚀</span>
                 </div>
                 <span className="text-[8px] font-black uppercase tracking-widest text-zinc-500">Share</span>
               </button>

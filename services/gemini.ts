@@ -1,10 +1,9 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 export const safetyGuardian = async (message: string) => {
   try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: `Analyze the following chat message for Nexus Sports (a youth and adult sports app). 
@@ -33,6 +32,7 @@ export const safetyGuardian = async (message: string) => {
 
 export const findRealVenues = async (sport: string, lat: number, lng: number, radiusMiles: number) => {
   try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: `Find exactly 3 real public ${sport} courts or sports parks within ${radiusMiles} miles of latitude ${lat}, longitude ${lng}. Return their specific street addresses and names. Be precise about the distance.`,
@@ -63,9 +63,15 @@ export const findRealVenues = async (sport: string, lat: number, lng: number, ra
 };
 
 export const generateSportsAdvice = async (sport: string, skillLevel: number) => {
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: `Give 3 pro tips for a level ${skillLevel} player in ${sport}. Keep it punchy and athletic.`,
-  });
-  return response.text;
+  try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: `Give 3 pro tips for a level ${skillLevel} player in ${sport}. Keep it punchy and athletic.`,
+    });
+    return response.text;
+  } catch (error) {
+    console.error("Advice generation error:", error);
+    return "Stay focused on basics and keep grinding.";
+  }
 };
