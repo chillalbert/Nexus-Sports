@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { UserCategory, Match, User, Sport, ApplicationStatus, DrillVideo } from './types';
+import { UserCategory, Match, User, Sport, ApplicationStatus, DrillVideo, PrivateMessage } from './types';
 import Layout from './components/Layout';
 import Discovery from './views/Discovery';
 import Lobby from './views/Lobby';
@@ -13,6 +13,7 @@ import CreateMatch from './views/CreateMatch';
 import TournamentView from './views/Tournament';
 import Verification from './views/Verification';
 import { MOCK_MATCHES, MOCK_USERS, MOCK_VIDEOS } from './constants';
+import { safetyGuardian } from './services/gemini';
 
 const GOOGLE_FORM_URL = "https://forms.gle/rjCy4KgTx7qPxrLZA";
 
@@ -28,6 +29,11 @@ const App: React.FC = () => {
   const [allUsers, setAllUsers] = useState<User[]>(() => {
     const saved = localStorage.getItem('nexus_all_users');
     return saved ? JSON.parse(saved) : MOCK_USERS;
+  });
+
+  const [privateMessages, setPrivateMessages] = useState<PrivateMessage[]>(() => {
+    const saved = localStorage.getItem('nexus_private_messages');
+    return saved ? JSON.parse(saved) : [];
   });
 
   useEffect(() => {
@@ -68,6 +74,36 @@ const App: React.FC = () => {
   const handleAwardCoins = (amount: number) => {
     if (!userProfile) return;
     persistUser({ ...userProfile, coinBalance: (userProfile.coinBalance || 0) + amount });
+  };
+
+  const handleSendPrivateMessage = async (receiverId: string, text: string) => {
+    if (!userProfile) return;
+    
+    const msgId = `pm-${Date.now()}`;
+    const newMsg: PrivateMessage = {
+      id: msgId,
+      senderId: userProfile.id,
+      senderName: userProfile.username,
+      receiverId: receiverId,
+      text: text,
+      timestamp: new Date().toISOString()
+    };
+
+    setPrivateMessages(prev => {
+      const next = [...prev, newMsg];
+      localStorage.setItem('nexus_private_messages', JSON.stringify(next));
+      return next;
+    });
+
+    // Run safety scan
+    const safety = await safetyGuardian(text);
+    if (!safety.isSafe) {
+      setPrivateMessages(prev => {
+        const next = prev.map(m => m.id === msgId ? { ...m, isFlagged: true, text: "🚫 Redacted for safety." } : m);
+        localStorage.setItem('nexus_private_messages', JSON.stringify(next));
+        return next;
+      });
+    }
   };
 
   const handleLogin = (user: User) => {
@@ -168,11 +204,10 @@ const App: React.FC = () => {
         activeTab === 'dashboard' ? <ParentDashboard /> :
         activeTab === 'discovery' ? <Discovery role={role} onJoinMatch={(m) => setSelectedMatch(m)} onCreateRequest={() => setIsCreatingMatch(true)} matches={matches} /> :
         activeTab === 'watch' ? <WatchFeed currentUser={userProfile} videos={videos} onFollowToggle={handleToggleFollow} onPostVideo={handlePostVideo} /> :
-        activeTab === 'friends' ? <Friends role={role} currentUser={userProfile} allUsers={allUsers} onFollowToggle={handleToggleFollow} /> :
+        activeTab === 'friends' ? <Friends role={role} currentUser={userProfile} allUsers={allUsers} onFollowToggle={handleToggleFollow} messages={privateMessages} onSendMessage={handleSendPrivateMessage} /> :
         activeTab === 'tournament' ? <TournamentView role={role} /> :
         activeTab === 'verification' ? <Verification pendingUsers={allUsers.filter(u => u.applicationStatus === 'pending')} onAction={handleVerificationAction} /> :
         activeTab === 'profile' ? <div className="p-6 pb-32">
-          {/* Reuse profile code from previous version */}
           <div className="flex items-center gap-6 mb-8">
             <div className="w-24 h-24 rounded-[2.5rem] bg-emerald-500 flex items-center justify-center text-4xl font-black italic shadow-2xl border-4 border-white/10">
               {(userProfile.username || 'NS').substring(0,2).toUpperCase()}

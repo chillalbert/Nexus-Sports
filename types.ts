@@ -39,7 +39,6 @@ export interface User {
   notifications?: string[];
 }
 
-// Fix: Added missing Venue interface required by constants.tsx
 export interface Venue {
   id: string;
   name: string;
@@ -74,6 +73,10 @@ export interface Message {
   text: string;
   timestamp: string;
   isFlagged?: boolean;
+}
+
+export interface PrivateMessage extends Message {
+  receiverId: string;
 }
 
 export interface DrillVideo {
