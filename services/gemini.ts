@@ -2,6 +2,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
 export const safetyGuardian = async (message: string) => {
+  // Always get key inside the call
   const apiKey = process.env.API_KEY;
   if (!apiKey) {
     console.warn("Safety Guardian: API Key missing, skipping check.");

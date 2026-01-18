@@ -1,5 +1,4 @@
 
-// Fix: Removed non-existent Tournament member from imports
 import { Sport, User, Venue, Match, MatchStatus, DrillVideo } from './types';
 
 export const MOCK_VENUES: Venue[] = [
@@ -11,7 +10,6 @@ export const MOCK_VENUES: Venue[] = [
 export const MOCK_USERS: User[] = [
   {
     id: 'u1',
-    // Fix: Added missing email, followers, and following properties to match User interface
     email: 'strikeforce99@nexus.com',
     username: 'StrikeForce99',
     dob: '2008-05-15',
@@ -23,11 +21,11 @@ export const MOCK_USERS: User[] = [
     friends: ['u2'],
     followers: [],
     following: [],
+    applicationStatus: 'none',
     elo: { [Sport.BASKETBALL_1V1]: 1250, [Sport.FOOTBALL_3V3]: 1100, [Sport.SOCCER_3V3]: 1050, [Sport.TENNIS_1V1]: 1000 }
   },
   {
     id: 'u2',
-    // Fix: Added missing email, followers, and following properties to match User interface
     email: 'dribbleking@nexus.com',
     username: 'DribbleKing',
     dob: '2010-11-22',
@@ -39,11 +37,11 @@ export const MOCK_USERS: User[] = [
     friends: ['u1'],
     followers: [],
     following: [],
+    applicationStatus: 'pending', // Added pending status for verification testing
     elo: { [Sport.BASKETBALL_1V1]: 1300, [Sport.FOOTBALL_3V3]: 1000, [Sport.SOCCER_3V3]: 1000, [Sport.TENNIS_1V1]: 1000 }
   },
   {
     id: 'u3',
-    // Fix: Added missing email, followers, and following properties to match User interface
     email: 'proathlete_x@nexus.com',
     username: 'ProAthlete_X',
     dob: '1995-02-10',
@@ -54,6 +52,7 @@ export const MOCK_USERS: User[] = [
     friends: [],
     followers: [],
     following: [],
+    applicationStatus: 'none',
     elo: { [Sport.BASKETBALL_1V1]: 2200, [Sport.FOOTBALL_3V3]: 1800, [Sport.SOCCER_3V3]: 1900, [Sport.TENNIS_1V1]: 1500 }
   }
 ];
@@ -63,7 +62,6 @@ export const MOCK_VIDEOS: DrillVideo[] = [
     id: 'd1',
     title: 'Perfect Free Throw Form',
     author: 'Coach Miller',
-    // Fix: Added missing required authorId property
     authorId: 'u3',
     videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
     likes: 1240,
@@ -74,7 +72,6 @@ export const MOCK_VIDEOS: DrillVideo[] = [
     id: 'd2',
     title: 'Top Spin Mastery',
     author: 'ProTennis_HQ',
-    // Fix: Added missing required authorId property
     authorId: 'u3',
     videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
     likes: 850,
@@ -95,7 +92,6 @@ export const MOCK_MATCHES: Match[] = [
     ageCategory: 'minor',
     creatorId: 'u2',
     participants: ['u2'],
-    // Fix: Added missing required checkInStatus and verificationCodes properties
     checkInStatus: { 'u2': 'none' },
     verificationCodes: { 'u2': 'ABCD12' }
   },
@@ -110,7 +106,6 @@ export const MOCK_MATCHES: Match[] = [
     ageCategory: 'adult',
     creatorId: 'u3',
     participants: ['u3'],
-    // Fix: Added missing required checkInStatus and verificationCodes properties
     checkInStatus: { 'u3': 'none' },
     verificationCodes: { 'u3': 'EFGH34' }
   }
